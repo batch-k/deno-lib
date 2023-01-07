@@ -1,0 +1,8 @@
+{
+    "deno.enable": true,
+    "deno.unstable": true,
+    "deno.inlayHints.variableTypes.enabled": false,
+    "deno.inlayHints.variableTypes.suppressWhenTypeMatchesName": false,
+    "deno.inlayHints.parameterNames.enabled": "none",
+    "deno.inlayHints.parameterNames.suppressWhenArgumentMatchesName": false
+}
