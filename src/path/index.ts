@@ -4,8 +4,8 @@ const ConsectiveSlashRe = /[\\\/]/g;
 
 const isUNC             = (path: string) => /^\\\\{2}|^\/\/{2}/.test(path);
 
-const toSlashAll        = async (path: string) => path.replace(ConsectiveSlashRe, "/");
-const toBackslashAll    = async (path: string) => path.replace(ConsectiveSlashRe, "\\");
+const toSlashAll        = (path: string) => path.replace(ConsectiveSlashRe, "/");
+const toBackslashAll    = (path: string) => path.replace(ConsectiveSlashRe, "\\");
 
 export const path = {
     isUNC,
