@@ -50,7 +50,7 @@ const readDir = <T extends boolean | undefined = false>(path: string, pathOnly?:
 type WalkResult<T extends boolean | undefined = undefined> =
 T extends (false | undefined) ? ReturnType<typeof denoFs.walk> : AsyncIterableIterator<string>;
 
-type WalkOption<T extends boolean | undefined> = Parameters<typeof denoFs.walk>[1] & {
+type WalkOption<T extends boolean | undefined> = denoFs.WalkOptions & {
     pathOnly?: T
 }
 
