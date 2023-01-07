@@ -4,5 +4,6 @@
     "deno.inlayHints.variableTypes.enabled": false,
     "deno.inlayHints.variableTypes.suppressWhenTypeMatchesName": false,
     "deno.inlayHints.parameterNames.enabled": "none",
-    "deno.inlayHints.parameterNames.suppressWhenArgumentMatchesName": false
+    "deno.inlayHints.parameterNames.suppressWhenArgumentMatchesName": false,
+    "deno.inlayHints.functionLikeReturnTypes.enabled": false
 }
