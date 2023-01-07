@@ -96,7 +96,7 @@ const readFileStream = async (path: string): Promise<{ data: Uint8Array; } | { d
     delimiterBuffer.set(new TextEncoder().encode(delimiter), 0);
     try{
         const stream = await createFileReader(path);
-        const reader = new BufReader(stream);
+        const reader = new BufReader(stream, (await stream.stat()).size);
         let buffer: Uint8Array | null = new Uint8Array(0);
         while(buffer !== null){
             buffer = await reader.readSlice('\n'.charCodeAt(0));
