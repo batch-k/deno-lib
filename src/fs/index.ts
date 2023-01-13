@@ -164,8 +164,8 @@ const copyFileStream = async (src: string, dest: string, options: { overwrite: b
     const s = pathLib.toSlashAll(src);
     const d = pathLib.toSlashAll(dest);
     const { overwrite, copyTimeStamp, bufferSize } = { ...CopyFileStreamDefaultOption, ...options };
-    const readStream    = await stream.read(s, { read: true });
-    const writeStream   = await stream.write(d, { write: true, create: true, createNew: !overwrite });
+    const readStream    = await createFileReader(s, { read: true });
+    const writeStream   = await createFileWriter(d, { write: true, create: true, createNew: !overwrite });
     const chunk = new Uint8Array(bufferSize);
     let eof = false;
     while(!eof){
@@ -191,6 +191,6 @@ export const fs = {
     stat, access, exists, isDirectory, isFile,
     readDir,
     walk, walkDirectories, walkFiles,
-
+    createFileReader, createFileWriter,
     readFileStream, readFile, writeFileStream, copyFileStream
 }
