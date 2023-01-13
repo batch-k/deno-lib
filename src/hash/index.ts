@@ -1,6 +1,4 @@
-import { encode } from 'https://deno.land/std/encoding/hex.ts'
-import { crypto } from 'https://deno.land/std/crypto/mod.ts'
-
+import { encode } from '../deps.ts'
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder("utf-8");
 

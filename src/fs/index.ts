@@ -1,11 +1,8 @@
-import * as denoFs from 'https://deno.land/std/fs/mod.ts'
-import { BufWriter, BufReader } from 'https://deno.land/std/io/mod.ts';
+import { denoFs, BufReader, BufWriter } from '../deps.ts'
 import { path as pathLib } from '../path/index.ts'
 import { stream } from '../stream/index.ts'
 
-const toSlashAll = (path: string) => pathLib.toSlashAll(path);
-
-const stat = (path: string) => Deno.stat(toSlashAll(path));
+const stat = (path: string) => Deno.stat(pathLib.toSlashAll(path));
 
 const access = (path: string) => stat(path).then(() => {}).catch(error => { throw error });
 
@@ -27,7 +24,7 @@ type ReadDirResult<T extends boolean | undefined = undefined> =
 T extends (false | undefined) ? ReturnType<typeof Deno.readDir> : AsyncIterable<string>;
 
 const readDir = <T extends boolean | undefined = false>(path: string, pathOnly?: T): ReadDirResult<T> => {
-    const slashAllPath = toSlashAll(path);
+    const slashAllPath = pathLib.toSlashAll(path);
     const result = Deno.readDir(slashAllPath);
 
     if(!pathOnly){ return <ReadDirResult<T>>result; }
@@ -56,7 +53,7 @@ type WalkOption<T extends boolean | undefined> = denoFs.WalkOptions & {
 
 const walk = <T extends boolean | undefined = false>(path: string, options?: WalkOption<T>): WalkResult<T> => {
     const { pathOnly, ..._options } = options ?? {};
-    const slashAllPath = toSlashAll(path);
+    const slashAllPath = pathLib.toSlashAll(path);
     const result = denoFs.walk(slashAllPath, _options);
     if(!pathOnly){ return <WalkResult<T>>result; }
 
@@ -84,10 +81,10 @@ const walkFiles = <T extends boolean | undefined = false>(path: string, options?
 }
 
 const getTimestamp = (path: string) => stat(path).then(({ atime: lastAccess, mtime: lastModified }) => ({ lastAccess, lastModified }));
-const setTimestamp = (path: string, lastAccess: Date, lastModified: Date) => Deno.utime(toSlashAll(path), lastAccess, lastModified);
+const setTimestamp = (path: string, lastAccess: Date, lastModified: Date) => Deno.utime(pathLib.toSlashAll(path), lastAccess, lastModified);
 
-const createFileReader = (path: string, options?: Deno.OpenOptions) => stream.read(toSlashAll(path), options);
-const createFileWriter = (path: string, options?: Deno.OpenOptions) => stream.write(toSlashAll(path), options);
+const createFileReader = (path: string, options?: Deno.OpenOptions) => stream.read(pathLib.toSlashAll(path), options);
+const createFileWriter = (path: string, options?: Deno.OpenOptions) => stream.write(pathLib.toSlashAll(path), options);
 
 const readFileStream = async (path: string): Promise<{ data: Uint8Array; } | { data: Uint8Array; error: Error; }> => {
     let result = new Uint8Array(0);
@@ -139,22 +136,40 @@ const writeFileStream = async (path: string, data: string) => {
     await writer.flush();
 }
 
-const CopyFileStreamOption = { overwrite: true, copyTimeStamp: true };
-const copyFileStream = async (src: string, dest: string, options: { overwrite: boolean, copyTimeStamp: boolean }) => {
-    const { overwrite, copyTimeStamp } = { ...CopyFileStreamOption, ...options };
-    const [reader, writer] = await Promise.all([
-        createFileReader(src),
-        createFileWriter(dest, { create: true, createNew: !overwrite })
-    ]);
-    const bufWriter = new BufWriter(writer);
-    for await(const chunk of reader.readable){ bufWriter.write(chunk); }
-    await bufWriter.flush();
-    if(!copyTimeStamp){ return; }
-    const { lastAccess, lastModified } = await getTimestamp(src);
-    if(lastAccess === null || lastModified === null){
-        throw new Error("Do not exists time stamp with source file, can't copy.");
+const CopyFileStreamDefaultOption = { overwrite: true, copyTimeStamp: true, bufferSize: 32 };
+const copyFileStream = async (
+    src: string,
+    dest: string,
+    options: {
+        overwrite?:     boolean;
+        copyTimeStamp?: boolean;
+        bufferSize?:    number;
     }
-    await setTimestamp(src, lastAccess, lastModified);
+) => {
+        const s = pathLib.toSlashAll(src);
+        const d = pathLib.toSlashAll(dest);
+        const { overwrite, copyTimeStamp, bufferSize } = { ...CopyFileStreamDefaultOption, ...options };
+        const readStream    = await stream.read(s, { read: true });
+        const writeStream   = await stream.write(d, { write: true, create: true, createNew: !overwrite });
+        const chunk = new Uint8Array(bufferSize);
+        let eof = false;
+        while(!eof){
+            const readBytes = await readStream.read(chunk);
+            eof = readBytes === null;
+            const writeBytes = readBytes === null ? 0 : readBytes;
+            await writeStream.write(chunk.slice(0, writeBytes));
+        }
+
+        writeStream.close();
+        readStream.close();
+
+        if(!copyTimeStamp){ return; }
+        const { lastAccess, lastModified } = await getTimestamp(src);
+        if(lastAccess === null || lastModified === null){
+            throw new Error("Do not exists time stamp with source file, can't copy.");
+        }
+
+        await setTimestamp(src, lastAccess, lastModified);
 }
 
 export const fs = {

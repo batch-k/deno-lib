@@ -1,5 +1,3 @@
-import { } from 'https://deno.land/std/path/mod.ts'
-
 const ConsectiveSlashRe     = /[\\\/]/g;
 const SuffixSlashRe         = /[\\\/]+$/;
 const ConsectivePeriodRe    = /\./g;
