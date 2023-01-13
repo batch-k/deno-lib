@@ -11,8 +11,13 @@ const basename          = (path: string) => path.split(ConsectiveSlashRe).slice(
 const extname           = (path: string) => `.${basename(path).split(ConsectivePeriodRe).slice(-1).join("")}`;
 const dirname           = (path: string) => path.replace(/[^\\\/]+$/g, "").replace(SuffixSlashRe, "");
 
+const scriptPath    = () => new URL(import.meta.url).pathname;
+const exePath       = () => Deno.execPath();
+
 export const path = {
     isUNC,
     toSlashAll, toBackslashAll,
-    basename, extname, dirname
+    basename, extname, dirname,
+    get script(){ return scriptPath().replace(/^[\\\/]+/, ""); },
+    get exe(){ return toSlashAll(exePath()); }
 }

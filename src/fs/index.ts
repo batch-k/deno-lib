@@ -12,6 +12,14 @@ const isDirectory = (path: string) => stat(path).then(({ isDirectory } ) => isDi
 
 const isFile = (path: string) => stat(path).then(({ isFile } ) => isFile).catch(() => false);
 
+const  itarableGenerator = <T>(data: Iterable<T>) => {
+    return async function*(){
+        for await (const value of data){
+            yield value;
+        }
+    }
+}
+
 const  asyncItarableGenerator = <T>(data: AsyncIterable<T>) => {
     return async function*(){
         for await (const value of data){
@@ -20,17 +28,36 @@ const  asyncItarableGenerator = <T>(data: AsyncIterable<T>) => {
     }
 }
 
-type ReadDirResult<T extends boolean | undefined = undefined> =
-T extends (false | undefined) ? ReturnType<typeof Deno.readDir> : AsyncIterable<string>;
+// deno-lint-ignore no-namespace
+export namespace DenoLibFs {
+    export type ReadDirResult<T extends boolean | undefined = undefined> =
+    T extends (false | undefined) ? ReturnType<typeof Deno.readDir> : AsyncIterable<string>;
 
-const readDir = <T extends boolean | undefined = false>(path: string, pathOnly?: T): ReadDirResult<T> => {
+    export type WalkResult<T extends boolean | undefined = undefined> =
+    T extends (false | undefined) ? ReturnType<typeof denoFs.walk> : AsyncIterableIterator<string>;
+
+    export type WalkOption<T extends boolean | undefined> = denoFs.WalkOptions & {
+        pathOnly?: T
+    }
+
+    const ReadFileEncodings = [
+        "unicode-1-1-utf-8", "utf-8", "utf8",
+        "utf-16be",
+        "cssshiftjis", "ms_kanji", "shift-jis", "sjis", "windows-31j", "x-sjis",
+        "cseucpkdfmtjapanese", "euc-jp", "x-euc-jp"
+    ] as const;
+
+    export type ReadFileEncoding = typeof ReadFileEncodings[number];
+}
+
+const readDir = <T extends boolean | undefined = false>(path: string, pathOnly?: T): DenoLibFs.ReadDirResult<T> => {
     const slashAllPath = pathLib.toSlashAll(path);
     const result = Deno.readDir(slashAllPath);
 
-    if(!pathOnly){ return <ReadDirResult<T>>result; }
+    if(!pathOnly){ return <DenoLibFs.ReadDirResult<T>>result; }
     const generator = asyncItarableGenerator(result)();
-
-    return <ReadDirResult<T>>{
+    
+    return <DenoLibFs.ReadDirResult<T>>{
         [Symbol.asyncIterator](){
             return {
                 async next(){
@@ -44,21 +71,14 @@ const readDir = <T extends boolean | undefined = false>(path: string, pathOnly?:
     }
 }
 
-type WalkResult<T extends boolean | undefined = undefined> =
-T extends (false | undefined) ? ReturnType<typeof denoFs.walk> : AsyncIterableIterator<string>;
-
-type WalkOption<T extends boolean | undefined> = denoFs.WalkOptions & {
-    pathOnly?: T
-}
-
-const walk = <T extends boolean | undefined = false>(path: string, options?: WalkOption<T>): WalkResult<T> => {
+const walk = <T extends boolean | undefined = false>(path: string, options?: DenoLibFs.WalkOption<T>): DenoLibFs.WalkResult<T> => {
     const { pathOnly, ..._options } = options ?? {};
     const slashAllPath = pathLib.toSlashAll(path);
     const result = denoFs.walk(slashAllPath, _options);
-    if(!pathOnly){ return <WalkResult<T>>result; }
+    if(!pathOnly){ return <DenoLibFs.WalkResult<T>>result; }
 
     const generator = asyncItarableGenerator(result)();
-    return <WalkResult<T>>{
+    return <DenoLibFs.WalkResult<T>>{
         [Symbol.asyncIterator](){
             return {
                 async next(){
@@ -72,12 +92,18 @@ const walk = <T extends boolean | undefined = false>(path: string, options?: Wal
     }
 }
 
-const walkDirectories = <T extends boolean | undefined = false>(path: string, options?: Omit<WalkOption<T>, "includeDirs" | "includeFiles">): WalkResult<T> => {
-    return <WalkResult<T>>walk(path, { ...options, includeFiles: false });
+const walkDirectories = <T extends boolean | undefined = false>(
+    path: string,
+    options?: Omit<DenoLibFs.WalkOption<T>, "includeDirs" | "includeFiles">
+): DenoLibFs.WalkResult<T> => {
+    return <DenoLibFs.WalkResult<T>>walk(path, { ...options, includeFiles: false });
 }
 
-const walkFiles = <T extends boolean | undefined = false>(path: string, options?: Omit<WalkOption<T>, "includeDirs" | "includeFiles">): WalkResult<T> => {
-    return <WalkResult<T>>walk(path, { ...options, includeDirs: false });
+const walkFiles = <T extends boolean | undefined = false>(
+    path: string,
+    options?: Omit<DenoLibFs.WalkOption<T>, "includeDirs" | "includeFiles">
+): DenoLibFs.WalkResult<T> => {
+    return <DenoLibFs.WalkResult<T>>walk(path, { ...options, includeDirs: false });
 }
 
 const getTimestamp = (path: string) => stat(path).then(({ atime: lastAccess, mtime: lastModified }) => ({ lastAccess, lastModified }));
@@ -111,14 +137,11 @@ const readFileStream = async (path: string): Promise<{ data: Uint8Array; } | { d
     return { data: result }
 }
 
-const ReadFileEncodings = [
-    "unicode-1-1-utf-8", "utf-8", "utf8",
-    "utf-16be",
-    "cssshiftjis", "ms_kanji", "shift-jis", "sjis", "windows-31j", "x-sjis",
-    "cseucpkdfmtjapanese", "euc-jp", "x-euc-jp"
-] as const;
-type ReadFileEncoding = typeof ReadFileEncodings[number];
-const readFile = async (path: string, encoding: ReadFileEncoding = "utf-8"): Promise<{ data: string; } | { data: string; error: Error; }> => {
+const readFile = async (
+    path: string,
+    encoding: DenoLibFs.
+    ReadFileEncoding = "utf-8"
+): Promise<{ data: string; } | { data: string; error: Error; }> => {
     const result = await readFileStream(path);
     if("error" in result){
         return { data: new TextDecoder(encoding).decode(result.data), error: result.error }
@@ -137,43 +160,35 @@ const writeFileStream = async (path: string, data: string) => {
 }
 
 const CopyFileStreamDefaultOption = { overwrite: true, copyTimeStamp: true, bufferSize: 32 };
-const copyFileStream = async (
-    src: string,
-    dest: string,
-    options: {
-        overwrite?:     boolean;
-        copyTimeStamp?: boolean;
-        bufferSize?:    number;
+const copyFileStream = async (src: string, dest: string, options: { overwrite: boolean, copyTimeStamp: boolean, bufferSize: number }) => {
+    const s = pathLib.toSlashAll(src);
+    const d = pathLib.toSlashAll(dest);
+    const { overwrite, copyTimeStamp, bufferSize } = { ...CopyFileStreamDefaultOption, ...options };
+    const readStream    = await stream.read(s, { read: true });
+    const writeStream   = await stream.write(d, { write: true, create: true, createNew: !overwrite });
+    const chunk = new Uint8Array(bufferSize);
+    let eof = false;
+    while(!eof){
+        const readBytes = await readStream.read(chunk);
+        eof = readBytes === null;
+        const writeBytes = readBytes === null ? 0 : readBytes;
+        await writeStream.write(chunk.slice(0, writeBytes));
     }
-) => {
-        const s = pathLib.toSlashAll(src);
-        const d = pathLib.toSlashAll(dest);
-        const { overwrite, copyTimeStamp, bufferSize } = { ...CopyFileStreamDefaultOption, ...options };
-        const readStream    = await stream.read(s, { read: true });
-        const writeStream   = await stream.write(d, { write: true, create: true, createNew: !overwrite });
-        const chunk = new Uint8Array(bufferSize);
-        let eof = false;
-        while(!eof){
-            const readBytes = await readStream.read(chunk);
-            eof = readBytes === null;
-            const writeBytes = readBytes === null ? 0 : readBytes;
-            await writeStream.write(chunk.slice(0, writeBytes));
-        }
 
-        writeStream.close();
-        readStream.close();
+    writeStream.close();
+    readStream.close();
 
-        if(!copyTimeStamp){ return; }
-        const { lastAccess, lastModified } = await getTimestamp(src);
-        if(lastAccess === null || lastModified === null){
-            throw new Error("Do not exists time stamp with source file, can't copy.");
-        }
+    if(!copyTimeStamp){ return; }
+    const { lastAccess, lastModified } = await getTimestamp(src);
+    if(lastAccess === null || lastModified === null){
+        throw new Error("Do not exists time stamp with source file, can't copy.");
+    }
 
-        await setTimestamp(src, lastAccess, lastModified);
+    await setTimestamp(src, lastAccess, lastModified);
 }
 
 export const fs = {
-    exists, isDirectory, isFile,
+    stat, access, exists, isDirectory, isFile,
     readDir,
     walk, walkDirectories, walkFiles,
 

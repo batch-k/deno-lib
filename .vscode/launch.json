@@ -10,6 +10,21 @@
             "type": "node",
             "program": "${file}",
             "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "C:/Users/urabayashi/.deno/bin/deno.exe",
+            "runtimeArgs": [
+                "run",
+                "--unstable",
+                "--inspect-wait",
+                "--allow-all"
+            ],
+            "attachSimplePort": 9229
+        },
+        {
+            "request": "launch",
+            "name": "Launch Program",
+            "type": "node",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}",
             "runtimeExecutable": "/usr/local/bin/deno",
             "runtimeArgs": [
                 "run",
