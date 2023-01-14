@@ -1,13 +1,9 @@
-import { fs, DenoLibFs } from './fs/index.ts'
-import { hash } from './hash/index.ts'
-import { path } from './path/index.ts'
-import { stream } from './stream/index.ts'
+import * as bufferConverter from './bufferConverter/mod.ts'
+import * as fs from './fs/mod.ts'
+import * as hash from './hash/mod.ts'
+import * as path from './path/mod.ts'
+import * as stream from './stream/mod.ts'
 
 export const DenoLib = {
-    fs,
-    hash,
-    path,
-    stream    
+    bufferConverter, fs, hash, path, stream
 }
-
-export { DenoLibFs };
