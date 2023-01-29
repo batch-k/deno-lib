@@ -181,3 +181,9 @@ export const copyFileStream = async (src: string, dest: string, options?: { over
 
     await setTimestamp(src, lastAccess, lastModified);
 }
+
+export const mkdir = (path: string) => Deno.mkdir(pathLib.toSlashAll(path), { recursive: false });
+export const mkdirs = (path: string) => Deno.mkdir(pathLib.toSlashAll(path), { recursive: true });
+
+export const rmdir = (path: string) => Deno.remove(pathLib.toSlashAll(path), { recursive: false });
+export const rmdirs = (path: string) => Deno.remove(pathLib.toSlashAll(path), { recursive: true });
