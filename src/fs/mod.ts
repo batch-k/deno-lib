@@ -179,7 +179,7 @@ export const copyFileStream = async (src: string, dest: string, options?: { over
         throw new Error("Do not exists time stamp with source file, can't copy.");
     }
 
-    await setTimestamp(src, lastAccess, lastModified);
+    await setTimestamp(dest, lastAccess, lastModified);
 }
 
 export const mkdir = (path: string) => Deno.mkdir(pathLib.toSlashAll(path), { recursive: false });
