@@ -152,6 +152,8 @@ export const writeFileStream = async (path: string, data: string) => {
 
     await writer.write(buffer);
     await writer.flush();
+
+    stream.close();
 }
 
 const CopyFileStreamDefaultOption = { overwrite: true, copyTimeStamp: true, bufferSize: 32 };
